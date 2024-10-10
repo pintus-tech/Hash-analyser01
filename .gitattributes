@@ -1,2 +1,91 @@
-# Auto detect text files and perform LF normalization
-* text=auto
+import hashlib
+import tkinter as tk
+from tkinter import filedialog
+
+class HashAnalyzerApp:
+    def __init__(self, root):
+        self.root = root
+        self.root.title("Analizzatore di Hash")
+
+        self.predefined_malware_hashes = [
+            "d41d8cd98f00b204e9800998ecf8427e",  # Esempio di hash (modifica con hash reali)
+            "e99a18c428cb38d5f260853678922e03",
+            "ab56b4d92b40713acc5af89985d4b786"
+        ]
+
+        self.create_widgets()
+        self.arrange_widgets()
+
+    def create_widgets(self):
+        self.label_file = tk.Label(self.root, text="Seleziona il file da analizzare:")
+        self.entry_file = tk.Entry(self.root, width=50)
+        self.button_select = tk.Button(self.root, text="Seleziona file", command=self.seleziona_file)
+
+        self.label_file_hash = tk.Label(self.root, text="Hash del file selezionato:")
+        self.file_hash_text = tk.StringVar()
+        self.label_hash = tk.Label(self.root, textvariable=self.file_hash_text)
+
+        self.label_hashes = tk.Label(self.root, text="Inserisci ulteriori hash SHA256 di file dannosi (uno per riga):")
+        self.entry_hashes = tk.Text(self.root, height=5, width=50)
+
+        self.button_analyze = tk.Button(self.root, text="Analizza hash", command=self.analizza_hash)
+        self.output_text = tk.StringVar()
+        self.label_output = tk.Label(self.root, textvariable=self.output_text)
+
+    def arrange_widgets(self):
+        self.label_file.grid(row=0, column=0, padx=10, pady=5, sticky="w")
+        self.entry_file.grid(row=0, column=1, padx=10, pady=5, sticky="ew")
+        self.button_select.grid(row=0, column=2, padx=10, pady=5)
+
+        self.label_file_hash.grid(row=1, column=0, padx=10, pady=5, sticky="w")
+        self.label_hash.grid(row=1, column=1, padx=10, pady=5, sticky="ew")
+
+        self.label_hashes.grid(row=2, column=0, padx=10, pady=5, sticky="w")
+        self.entry_hashes.grid(row=2, column=1, padx=10, pady=5, sticky="ew")
+
+        self.button_analyze.grid(row=3, column=0, columnspan=3, padx=10, pady=5)
+        self.label_output.grid(row=4, column=0, columnspan=3, padx=10, pady=5, sticky="w")
+
+    def seleziona_file(self):
+        file_path = filedialog.askopenfilename()
+        if file_path:
+            self.entry_file.delete(0, tk.END)
+            self.entry_file.insert(0, file_path)
+            self.calcola_hash(file_path)
+
+    def calcola_hash(self, file_path):
+        sha256 = hashlib.sha256()
+        try:
+            with open(file_path, "rb") as f:
+                for chunk in iter(lambda: f.read(4096), b''):
+                    sha256.update(chunk)
+            file_hash = sha256.hexdigest()
+            self.file_hash_text.set(file_hash)
+            return file_hash
+        except FileNotFoundError:
+            self.output_text.set(f"File '{file_path}' non trovato.")
+            self.file_hash_text.set("")
+            return None
+
+    def analizza_file(self, file_path, hashes_malware):
+        file_hash = self.file_hash_text.get()
+        if file_hash:
+            if file_hash in hashes_malware:
+                self.output_text.set(f"Il file '{file_path}' potrebbe contenere malware.")
+            else:
+                self.output_text.set(f"Il file '{file_path}' sembra essere sicuro.")
+
+    def analizza_hash(self):
+        file_path = self.entry_file.get()
+        additional_hashes = self.entry_hashes.get("1.0", tk.END).strip().split()
+        hashes_malware = set(self.predefined_malware_hashes + additional_hashes)
+        if file_path and hashes_malware:
+            self.analizza_file(file_path, hashes_malware)
+        else:
+            self.output_text.set("Per favore, inserisci un file e gli hash da controllare.")
+
+
+if __name__ == "__main__":
+    root = tk.Tk()
+    app = HashAnalyzerApp(root)
+    root.mainloop()
